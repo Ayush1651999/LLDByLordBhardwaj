@@ -7,15 +7,17 @@ import java.util.Set;
 
 public class Main {
     public static void main(String[] args){
-
         BookMyShowApp app = new BookMyShowApp();
         app.addCity("Delhi"); // todo use enums
         app.addCity("Mumbai");
 
-        app.addVenue("Delhi", "venue_id_1", 100);
+        Venue venue1 = new Venue("Delhi", "venue_id_1", 100);
+        app.addVenue(venue1);
 
-        app.addEvent("Delhi", "event_id_1", "venue_id_1", "time_slot_1");
-        app.addEvent("Delhi", "event_id_2", "venue_id_1", "time_slot_2");
+        Event event1 = new Event("event_id_1", venue1, "time_slot_1");
+        Event event2 = new Event("event_id_2", venue1, "time_slot_2");
+        app.addEvent(event1);
+        app.addEvent(event2);
 
         app.selectCity("Delhi");
         List<Event> events = app.listEvents(); // todo add filter on time slot
@@ -23,6 +25,7 @@ public class Main {
         app.selectEvent(events.get(0));
 
         List<Seat> seats = app.getAvailableSeats();
+
         List<Seat> selectedSeats = new ArrayList<>();
         selectedSeats.add(seats.get(0));
         selectedSeats.add(seats.get(1));
@@ -39,6 +42,7 @@ class BookMyShowApp {
     List<Event> events;
     List<Booking> bookings;
     List<BookingSeat> bookingSeats;
+
     String selectedCity;
     private Event selectedEvent;
 
@@ -59,11 +63,6 @@ class BookMyShowApp {
         this.venues.add(venue);
     }
 
-    public void addEvent(String city, String eventId, String venueId, String timeSlot) {
-        Event event = new Event(city, eventId, venueId, timeSlot);
-        this.events.add(event);
-    }
-
     public void selectCity(String city) {
         this.selectedCity = city;
     }
@@ -71,7 +70,7 @@ class BookMyShowApp {
     public List<Event> listEvents() {
         List<Event> eventsInCity = new ArrayList<>();
         for(Event event : this.events){
-            if(this.selectedCity.equals(event.getCity())){
+            if(this.selectedCity.equals(event.getVenue().getCity())){
                 eventsInCity.add(event);
             }
         }
@@ -84,14 +83,17 @@ class BookMyShowApp {
     }
 
     public void createBooking(String userId, List<Seat> seats) {
-        String bookingId = Integer.toString(this.bookings.size());
-        Booking booking = new Booking(bookingId, userId, this.selectedEvent.getEventId(), seats.size(), "SUCCESSFUL");
+        String newBookingId = Integer.toString(this.bookings.size());
+        Booking booking = new Booking(newBookingId, userId, this.selectedEvent.getEventId(), seats.size(), "SUCCESSFUL");
         this.bookings.add(booking);
+
+        for(Seat seat : seats){
+            this.bookingSeats.add(new BookingSeat(newBookingId, seat.getSeatId()));
+        }
     }
 
     public List<Seat> getAvailableSeats() {
         // for a given event, get all the seats that are available -> this.event
-        this.selectedEvent.getVenueId();
 
         // 1. get bookings for this event
         List<String> bookingIds = new ArrayList<>();
@@ -110,7 +112,7 @@ class BookMyShowApp {
         }
 
         // 3. for my given venue, find the seats that are not in the above set
-        Venue eventVenue = getVenueById(this.selectedEvent.getVenueId());
+        Venue eventVenue = this.selectedEvent.getVenue();
         List<Seat> availableSeats = new ArrayList<>();
         for(Seat seat : eventVenue.seats){
             if(!bookedSeatIds.contains(seat.seatId)){
@@ -140,27 +142,25 @@ class BookMyShowApp {
 
         return userBookings;
     }
+
+    public void addVenue(Venue venue) {
+        this.venues.add(venue);
+    }
+
+    public void addEvent(Event event) {
+        this.events.add(event);
+    }
 }
 
 class Event {
-    private String city;
     private String eventId;
-    private String venueId;
+    private Venue venue; // Venue venue
     private String timeSlot;
 
-    public Event(String city, String eventId, String venueId, String timeSlot) {
-        this.setCity(city);
-        this.setEventId(eventId);
-        this.setVenueId(venueId);
-        this.setTimeSlot(timeSlot);
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
+    public Event(String eventId, Venue venue, String timeSlot) {
+        this.eventId = eventId;
+        this.venue = venue;
+        this.timeSlot = timeSlot;
     }
 
     public String getEventId() {
@@ -171,12 +171,12 @@ class Event {
         this.eventId = eventId;
     }
 
-    public String getVenueId() {
-        return venueId;
+    public Venue getVenue() {
+        return venue;
     }
 
-    public void setVenueId(String venueId) {
-        this.venueId = venueId;
+    public void setVenue(Venue venue) {
+        this.venue = venue;
     }
 
     public String getTimeSlot() {
@@ -206,6 +206,10 @@ class Venue {
 
     public String getVenueId() {
         return this.venueId;
+    }
+
+    public String getCity() {
+        return this.city;
     }
 }
 
@@ -245,6 +249,10 @@ class BookingSeat {
     private String bookingId;
     private String seatId;
 
+    public BookingSeat(String bookingId, String seatId) {
+        this.bookingId = bookingId;
+        this.seatId = seatId;
+    }
 
     public String getBookingId() {
         return bookingId;
@@ -263,6 +271,10 @@ class Seat {
         this.venueId = venueId;
         this.seatId = String.valueOf(seatId);
     }
+
+    public String getSeatId() {
+        return this.seatId;
+    }
 }
 
 /*
@@ -272,6 +284,9 @@ Venue
 -venue_id
 -seat_id / List<Seat>
 -city_id
+
+Seat
+-
 
 Event
 -event_id
